@@ -17,13 +17,6 @@ CSV_FNAMES = {
     'test-processed': os.path.join(DATA_DIR, 'test_users-processed.csv')
 }
 
-categorical_features = ['gender', 'signup_method', 'signup_flow',
-                     'language', 'affiliate_channel', 'affiliate_provider',
-                      'signup_app', 'first_device_type', 'first_browser']
-
-BASELINE_FEATURES = ['id', 'date_account_created', 'timestamp_first_active',
-                     'date_first_booking', 'age', 'country_destination'] + categorical_features
-
 class BaselineDataset():
     def __init__(self, data, mode='train'):
         self.mode = mode
@@ -38,14 +31,14 @@ class BaselineDataset():
         df = df.drop(dropped_features, axis=1)
         df = df.fillna(-1)
         #Feature Engineering
-        # date_account_created
+        # date_account_created (process the month, year, and day)
         dac = np.vstack(df.date_account_created.astype(str).apply(lambda x: list(map(int, x.split('-')))).values)
         df['dac_year'] = dac[:, 0]
         df['dac_month'] = dac[:, 1]
         df['dac_day'] = dac[:, 2]
         df = df.drop(['date_account_created'], axis=1)
 
-        # timestamp_first_active
+        # timestamp_first_active (process the month, year, and day)
         tfa = np.vstack(df.timestamp_first_active.astype(str).apply(
             lambda x: list(map(int, [x[:4], x[4:6], x[6:8], x[8:10], x[10:12], x[12:14]]))).values)
         df['tfa_year'] = tfa[:, 0]
@@ -53,7 +46,7 @@ class BaselineDataset():
         df['tfa_day'] = tfa[:, 2]
         df = df.drop(['timestamp_first_active'], axis=1)
 
-        # Age
+        # Age - set any outlier values to -1 (median/avg apparently made it worse)
         av = df.age.values
         df['age'] = np.where(np.logical_or(av < 14, av > 100), -1, av)
 
@@ -70,13 +63,13 @@ class BaselineDataset():
         df = data.copy()
         X_train = df.iloc[:index_train]
         X_test = df.iloc[index_train:]
-
+        # drop id from training set
         X_train = X_train.drop('id', axis=1)
         return X_train, X_test
 
-    def save(self, csv_fname):
-        self.df.to_csv(csv_fname, index=False)
-        print('Dataset saved to {}'.format(csv_fname))
+    # def save(self, csv_fname):
+    #     self.df.to_csv(csv_fname, index=False)
+    #     print('Dataset saved to {}'.format(csv_fname))
 
 def make_dataset(csv_fname, do_baseline=True, save=True):
     # create baseline dataset then train your model
