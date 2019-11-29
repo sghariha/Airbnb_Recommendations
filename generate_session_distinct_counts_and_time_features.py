@@ -70,8 +70,11 @@ def add_timestamp_features_to_user_feature_vector(
         session_features_by_user[user]['total_seconds_elapsed'] = sum(user_seconds)
         session_features_by_user[user]['mean_seconds_elapsed'] = np.mean(user_seconds)
         session_features_by_user[user]['std_seconds_elapsed'] = np.std(user_seconds)
-        session_features_by_user[user]['min_seconds_elapsed'] = min(user_seconds)
         session_features_by_user[user]['max_seconds_elapsed'] = max(user_seconds)
+        if max(user_seconds) == 0:
+            session_features_by_user[user]['min_seconds_elapsed'] = min(user_seconds)
+        else:
+            session_features_by_user[user]['min_seconds_elapsed'] = np.min(user_seconds[np.nonzero(user_seconds)])
         session_features_by_user[user]['skewness_seconds_elapsed'] = stats.skew(user_seconds)
         session_features_by_user[user]['kurtosis_seconds_elapsed'] = stats.kurtosis(user_seconds)
         
