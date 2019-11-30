@@ -38,27 +38,48 @@ class BaselineDataset():
         dropped_features = ['date_first_booking']
         df = df.drop(dropped_features, axis=1)
         df = df.fillna(-1)
-        #Feature Engineering
+        # Feature Engineering
         # date_account_created (process the month, year, and day)
-        dac = np.vstack(df.date_account_created.astype(str).apply(lambda x: list(map(int, x.split('-')))).values)
-        df['dac_year'] = dac[:, 0]
-        df['dac_month'] = dac[:, 1]
-        df['dac_day'] = dac[:, 2]
+        dac = np.vstack(
+            df.date_account_created.astype(str)
+            .apply(lambda x: list(map(int, x.split("-"))))
+            .values
+        )
+        df["dac_year"] = dac[:, 0]
+        df["dac_month"] = dac[:, 1]
+        df["dac_day"] = dac[:, 2]
 
         # timestamp_first_active (process the month, year, and day)
-        tfa = np.vstack(df.timestamp_first_active.astype(str).apply(
-            lambda x: list(map(int, [x[:4], x[4:6], x[6:8], x[8:10], x[10:12], x[12:14]]))).values)
-        df['tfa_year'] = tfa[:, 0]
-        df['tfa_month'] = tfa[:, 1]
-        df['tfa_day'] = tfa[:, 2]
+        tfa = np.vstack(
+            df.timestamp_first_active.astype(str)
+            .apply(
+                lambda x: list(
+                    map(int, [x[:4], x[4:6], x[6:8], x[8:10], x[10:12], x[12:14]])
+                )
+            )
+            .values
+        )
+        df["tfa_year"] = tfa[:, 0]
+        df["tfa_month"] = tfa[:, 1]
+        df["tfa_day"] = tfa[:, 2]
 
         # Age - set any outlier values to -1 (median/avg apparently made it worse)
         av = df.age.values
         df['age'] = np.where(np.logical_or(av < 14, av > 100), -1, av)
 
         # One-hot-encoding features
-        ohe_feats = ['gender', 'signup_method', 'signup_flow', 'language', 'affiliate_channel', 'affiliate_provider',
-                     'first_affiliate_tracked', 'signup_app', 'first_device_type', 'first_browser']
+        ohe_feats = [
+            "gender",
+            "signup_method",
+            "signup_flow",
+            "language",
+            "affiliate_channel",
+            "affiliate_provider",
+            "first_affiliate_tracked",
+            "signup_app",
+            "first_device_type",
+            "first_browser",
+        ]
         df = self.one_hot_encode_features(df, ohe_feats, drop_raw)
 
         # drop all of the raw columns after processing them
