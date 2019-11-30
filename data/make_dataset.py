@@ -16,6 +16,18 @@ CSV_FNAMES = {
     'test-processed': os.path.join(DATA_DIR, 'test_users-processed.csv')
 }
 
+# features
+'''
+statistical_features = [i for i in df.columns if i.endswith('_elapsed')] + ['n_actions_per_user', 'n_distinct_action_detail', 'n_distinct_action_types',
+'n_distinct_actions',
+'n_distinct_device_types']
+ratios = ['ratio_distinct_actions',
+'ratio_distinct_actions_types',
+'ratio_distinct_action_details',
+'ratio_distinct_devices']
+casted_features = [i for i in df.columns if i.endswith('_ratio')]
+'''
+
 class BaselineDataset():
     def __init__(self, data, drop_raw=True):
         self.data = self.process(data.copy(), drop_raw=drop_raw)
