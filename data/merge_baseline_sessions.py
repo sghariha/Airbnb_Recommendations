@@ -1,3 +1,12 @@
+"""Merge baselines and sessions csv
+
+# Usage
+    mergeBaselineAndSessionFeatures(
+        "../airbnb-recruiting-new-user-bookings/test_users-processed.csv",
+        "../sessions-data/sessions-engineered.csv",
+        "../airbnb-recruiting-new-user-bookings/feature-matrix.csv"
+    )
+"""
 from collections import defaultdict
 import csv
 
@@ -63,8 +72,3 @@ def mergeBaselineAndSessionFeatures(baselinePath, sessionPath, outputCSVPath):
         filewriter.writerow(header)
         for id in baselineData:
             filewriter.writerow(baselineData[id])
-
-
-mergeBaselineAndSessionFeatures(
-    "test_users-processed.csv", "sessions-engineered.csv", "feature-matrix.csv"
-)
