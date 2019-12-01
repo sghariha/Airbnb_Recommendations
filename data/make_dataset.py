@@ -4,29 +4,20 @@ import numpy as np
 import pandas as pd
 
 from d_utils import read_in_dataset
+from merge_baseline_sessions import mergeBaselineAndSessionFeatures
 
 DATA_DIR = '../airbnb-recruiting-new-user-bookings'
 CSV_FNAMES = {
-    'age_bucket': os.path.join(DATA_DIR, 'age_gender_bkts.csv'),
-    'countries': os.path.join(DATA_DIR, 'countries.csv'),
-    'sessions': os.path.join(DATA_DIR, 'sessions.csv'),
     'test': os.path.join(DATA_DIR, 'test_users.csv'),
     'train': os.path.join(DATA_DIR, 'train_users_2.csv'),
     'train-processed': os.path.join(DATA_DIR, 'train_users_2-processed.csv'),
-    'test-processed': os.path.join(DATA_DIR, 'test_users-processed.csv')
+    'test-processed': os.path.join(DATA_DIR, 'test_users-processed.csv'),
+    'train-feature_eng': os.path.join(DATA_DIR, 'train_users_2-feature_eng.csv'),
+    'test-feature_eng': os.path.join(DATA_DIR, 'test_users-feature_eng.csv'),
+    'sessions-eng': os.path.join('../sessions-data/sessions-engineered.csv'),
+    'train-merged_sessions': os.path.join(DATA_DIR, 'train_users-merged_sessions.csv'),
+    'test-merged_sessions': os.path.join(DATA_DIR, 'test_users-merged_sessions.csv')
 }
-
-# features
-'''
-statistical_features = [i for i in df.columns if i.endswith('_elapsed')] + ['n_actions_per_user', 'n_distinct_action_detail', 'n_distinct_action_types',
-'n_distinct_actions',
-'n_distinct_device_types']
-ratios = ['ratio_distinct_actions',
-'ratio_distinct_actions_types',
-'ratio_distinct_action_details',
-'ratio_distinct_devices']
-casted_features = [i for i in df.columns if i.endswith('_ratio')]
-'''
 
 class BaselineDataset():
     def __init__(self, data, drop_raw=True):
@@ -102,7 +93,6 @@ class BaselineDataset():
         X_train = df.iloc[:index_train]
         X_test = df.iloc[index_train:]
         # drop id from training set
-        X_train = X_train.drop('id', axis=1)
         print('SUCCESS: Dataset split')
         return X_train, X_test
 
@@ -141,24 +131,37 @@ class AirBnBDataset(BaselineDataset):
         return df
 
 if __name__ == '__main__':
-    PRE = 'processed'
     do_baseline = False
+    do_merged_sessions = True
 
-    df_train = read_in_dataset(CSV_FNAMES['train'])
-    df_test = read_in_dataset(CSV_FNAMES['test'])
-    idx_train = df_train.shape[0]
-    df = pd.concat((df_train, df_test), axis=0, ignore_index=True, sort=True)
-
-    drop_raw = True if do_baseline else False
-    dataset = BaselineDataset(data=df, drop_raw=drop_raw)
-
-    if not do_baseline:
+    if do_merged_sessions:
         PRE = 'feature_eng'
-        dataset = AirBnBDataset(dataset)
-    X_train, X_test = dataset.split(data=dataset.data, index_train=idx_train)
+        train_input = CSV_FNAMES['train-{}'.format(PRE)]
+        test_input = CSV_FNAMES['test-{}'.format(PRE)]
+        sessions_input = CSV_FNAMES['sessions-eng']
+        print('Merging training set')
+        mergeBaselineAndSessionFeatures(train_input, sessions_input, CSV_FNAMES['train-merged_sessions'])
+        print('Merging test set')
+        mergeBaselineAndSessionFeatures(test_input, sessions_input, CSV_FNAMES['test-merged_sessions'])
 
-    output_fname = CSV_FNAMES['train'].split('.csv')[0] + '-{}.csv'.format(PRE)
-    X_train.to_csv(output_fname, index=False)
-    output_fname = CSV_FNAMES['test'].split('.csv')[0] + '-{}.csv'.format(PRE)
-    X_test.to_csv(output_fname, index=False)
-    print('Complete')
+    else:
+        PRE = 'processed'
+        df_train = read_in_dataset(CSV_FNAMES['train'])
+        df_test = read_in_dataset(CSV_FNAMES['test'])
+        idx_train = df_train.shape[0]
+        df = pd.concat((df_train, df_test), axis=0, ignore_index=True, sort=True)
+
+        drop_raw = True if do_baseline else False
+        dataset = BaselineDataset(data=df, drop_raw=drop_raw)
+
+        if not do_baseline:
+            PRE = 'feature_eng'
+            dataset = AirBnBDataset(dataset)
+        X_train, X_test = dataset.split(data=dataset.data, index_train=idx_train)
+
+        #=== Save dataset ===#
+        output_fname = CSV_FNAMES['train'].split('.csv')[0] + '-{}.csv'.format(PRE)
+        X_train.to_csv(output_fname, index=False)
+        output_fname = CSV_FNAMES['test'].split('.csv')[0] + '-{}.csv'.format(PRE)
+        X_test.to_csv(output_fname, index=False)
+        print('Complete')
