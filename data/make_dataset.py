@@ -1,11 +1,28 @@
+"""Make Airbnb Recommendation dataset
+
+This script features creating datasets in multiple fashions:
+- raw baseline features <--- cleaned up data prior to feature engineering
+- feature engineered datasets
+
+One can choose between the two by setting the module level constants
+```
+    do_baseline = False
+    do_merged_sessions = True
+```
+
+"""
+# Standard Dist imports
 import os
 
+# Third party imports
 import numpy as np
 import pandas as pd
 
+# Project level imports
 from d_utils import read_in_dataset
 from merge_baseline_sessions import mergeBaselineAndSessionFeatures
 
+# Module level constants
 DATA_DIR = '../airbnb-recruiting-new-user-bookings'
 CSV_FNAMES = {
     'test': os.path.join(DATA_DIR, 'test_users.csv'),
@@ -20,11 +37,32 @@ CSV_FNAMES = {
 }
 
 class BaselineDataset():
+    """Creates our baseline features from the airbnb dataset
+
+    The BaselineDataset is set up to establish our baseline performance, by
+    only using cleaned up features from the airbnb dataset.
+    """
     def __init__(self, data, drop_raw=True):
+        """Initializes BaselineDataset
+
+        One can access the dataset by acessing its `data` attribute after
+        initialization.
+
+        :param data (pd.DataFrame): Dataset to be processed
+        :param drop_raw (bool): Flag for dropping the raw features. Default set to True.
+        """
         self.data = self.process(data.copy(), drop_raw=drop_raw)
         print('Processed')
 
     def process(self, data, drop_raw=True, verbose=True):
+        """ Processes the dataset
+
+        :param data (pd.DataFrame): Dataset to be processed
+        :param drop_raw (bool): Flag for dropping the raw features. Default set to True.
+        :param verbose (bool): Flag for verbosity. Default set to True
+        :return:
+            pd.DataFrame: Processed dataset
+        """
         df = data.copy()
         dropped_features = ['date_first_booking']
         df = df.drop(dropped_features, axis=1)
@@ -80,6 +118,14 @@ class BaselineDataset():
         return df
 
     def one_hot_encode_features(self, data, ohe_features, drop_raw=False):
+        """One hot encoded features
+
+        :param data (pd.DataFrame): Dataset
+        :param ohe_features (list): List of features to be one hot encoded
+        :param drop_raw (bool): Flag for dropping the raw features. Default set to True.
+        :return:
+            pd.DataFrame: One hot encoded features within a Dataframe
+        """
         df = data.copy()
         for f in ohe_features:
             df_dummy = pd.get_dummies(df[f], prefix=f)
@@ -89,6 +135,18 @@ class BaselineDataset():
         return df
 
     def split(self, data, index_train):
+        """ Splits up the dataset into training and testing
+
+        Use case is to combine the training and test set, so we can process
+        both datasets in a uniform fashion. This function is to help split them back into
+        its original dataset after the preprocessing.
+
+        :param data (pd.DataFrame): Dataset to be split
+        :param index_train (int): Training index
+        :return:
+            pd.DataFrame: Training set
+            pd.DataFrame: Test set
+        """
         df = data.copy()
         X_train = df.iloc[:index_train]
         X_test = df.iloc[index_train:]
@@ -97,19 +155,44 @@ class BaselineDataset():
         return X_train, X_test
 
 class AirBnBDataset(BaselineDataset):
+    """The Feature Engineered AirBnB Dataset
+
+    This class is to help differentiate from our baseline as the main dataset
+    that is used to train our recommender system.
+    """
     def __init__(self, data, process_data=False):
+        """ Initializes AirBnBDataset
+
+        Processes the dataset if it has not been processed yet in the Baseline
+
+        :param data (pd.DataFrame): Dataset to be feature engineered/processed
+        :param process_data (bool): Flag for processing the dataset
+        """
+        # Process the dataset if set to True
         if process_data:
             data = self.process(data.copy())
             print('SUCCESS: Processed')
 
+        # Pass in any planned raw features from the Baseline Dataset
+        # that need to be dropped after feature engineering them
         if isinstance(data, BaselineDataset):
             self.dropped_raw_features = data.dropped_raw_features
             data = data.data
 
+        # Feature engineer the dataset
         self.data = self.feature_engineer(data)
         print('SUCCESS: Features engineered')
 
     def feature_engineer(self, data):
+        """ Create newly feature engineered dataset
+
+        Used during initialization of the AirBnB Dataset.
+        Seasonal feature engineering is added here.
+
+        :param data (pd.DataFrame): Dataset to be feature engineered
+        :return:
+            pd.DataFrame: New dataset
+        """
         df = data.copy()
 
         #=== Feature engineering ===#
@@ -134,6 +217,9 @@ if __name__ == '__main__':
     do_baseline = False
     do_merged_sessions = True
 
+    # Merge our baseline and sessions dataset if set to true
+    # the sessions data is lengthy in generation time, so it lives in its own script
+    # aside from our dataset making script. This is to help combine them.
     if do_merged_sessions:
         PRE = 'feature_eng'
         train_input = CSV_FNAMES['train-{}'.format(PRE)]
@@ -145,18 +231,24 @@ if __name__ == '__main__':
         mergeBaselineAndSessionFeatures(test_input, sessions_input, CSV_FNAMES['test-merged_sessions'])
 
     else:
+        # Load up our datasets from the csv files
         PRE = 'processed'
         df_train = read_in_dataset(CSV_FNAMES['train'])
         df_test = read_in_dataset(CSV_FNAMES['test'])
         idx_train = df_train.shape[0]
         df = pd.concat((df_train, df_test), axis=0, ignore_index=True, sort=True)
 
+        # Process the dataset into our Baseline
         drop_raw = True if do_baseline else False
         dataset = BaselineDataset(data=df, drop_raw=drop_raw)
 
+        # Feature engineer the dataset if we don't want to settle
+        # for the BaselineDataset
         if not do_baseline:
             PRE = 'feature_eng'
             dataset = AirBnBDataset(dataset)
+
+        # split up the dataset back into its training and test given the original indexing
         X_train, X_test = dataset.split(data=dataset.data, index_train=idx_train)
 
         #=== Save dataset ===#

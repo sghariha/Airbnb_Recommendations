@@ -1,2 +1,7 @@
 baseline.csv/*
 airbnb-recruiting-new-user-bookings/*
+sub.csv
+finalized_model.sav
+figs/*
+sessions-data/sessions-engineered.csv
+sessions-data/sessions_distinct_and_time_features.csv

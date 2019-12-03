@@ -1,15 +1,22 @@
 """Train and evaluate AirBnB Recommender System
 
-#TODO write evaluation metric (NDCG), confusion matrix plots
-#TODO conduct cross validation experiment
-#TODO include pearson correlation
-#TODO some kind of clustering
+This script is designed to train and evaluate a recommendation model.
+It begins with loading and partitioning our datasets, then going straight
+into training and evaluation. Results will be outputted for the training and
+validation set. It also features plotting feature importances,
+since our model is an XGB classifier. Finally, it will output the test set
+predictions that can be uploaded to kaggle to view the score on the leaderboard.
+
+Prior to running this script, please ensure the datasets have been made
+by running `make_dataset.py` under our `data` directory. The list of datasets
+are listed in the documentation of the script.
 
 """
 
 # Standard dist imports
 import os
 import datetime
+import pickle
 
 # Third party imports
 import pandas as pd
@@ -22,7 +29,7 @@ from xgboost.sklearn import XGBClassifier
 
 # Project level imports
 from data.d_utils import read_in_dataset, experiment_features
-from model.eval_model import evaluate_lr
+from model.eval_model import evaluate_model, plot_feature_importances
 
 # Module level constants
 DATA_DIR = './airbnb-recruiting-new-user-bookings'
@@ -41,11 +48,14 @@ DATASET_TYPE = 'merged_sessions'
 
 # Model Default
 XGB_MODEL = True
+SAVE = False
 
 # EXPERIMENTAL_FEATURES
-STATS_flag = False
-RATIOS_flag = False
+STATS_flag = True
+RATIOS_flag = True
 CASTED_flag = True
+
+#=== BEGIN: Airbnb Recommendation ===#
 
 # Read in training set and encode labels
 start_timer = datetime.datetime.now()
@@ -58,6 +68,10 @@ airbnb.X = experiment_features(data=airbnb.X,
                                stats=STATS_flag,
                                ratios=RATIOS_flag,
                                casted=CASTED_flag, verbose=True)
+# Save feature helper dictionaries
+airbnb.idx2feature = {idx: feature for idx, feature in enumerate(airbnb.X.columns)}
+airbnb.feature2idx = {feature: idx for idx, feature in enumerate(airbnb.X.columns)}
+# Encode the labels
 airbnb.train_labels = airbnb.X.pop('country_destination')
 airbnb.le = LabelEncoder()
 airbnb.le.fit(airbnb.train_labels)
@@ -84,14 +98,15 @@ print('Dataset sizes: TRAIN: {:5} | VAL: {:5} | TEST {:5}'.format(
 del airbnb.X
 del airbnb.y
 
-#Compute class weights
+# Compute class weights
 class_weight_list = compute_class_weight('balanced',
                                          np.unique(np.ravel(airbnb.y_train,order='C')),
                                          np.ravel(airbnb.y_train,order='C'))
 class_weight = dict(zip(np.unique(airbnb.y_train), class_weight_list))
 print(class_weight)
 
-
+# Begin training the model
+# flags are set to decide between which model to run
 print('Training classifier')
 if XGB_MODEL:
     # === XGB Classifier (tuned) ===#
@@ -111,11 +126,20 @@ else:
 
 # Evaluate classifiers
 print('Training set')
-print(evaluate_lr(airbnb.y_train, airbnb.y_pred_train))
+print(evaluate_model(airbnb.y_train, airbnb.y_pred_train))
 print()
 print('Validation set')
-print(evaluate_lr(airbnb.y_val, airbnb.y_pred_val))
+print(evaluate_model(airbnb.y_val, airbnb.y_pred_val))
 print()
+
+# Plot the feature importance for parameter insights
+plot_feature_importances(model.feature_importances_, airbnb.idx2feature)
+
+# Save model
+if SAVE:
+    # save the model to disk
+    filename = 'finalized_model.sav'
+    pickle.dump(model, open(filename, 'wb'))
 
 # Write test predictions to submission file
 #Taking the 5 classes with highest probabilities
