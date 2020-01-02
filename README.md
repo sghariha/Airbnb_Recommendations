@@ -19,7 +19,7 @@ the Airbnb dataset.
 - `pip install --user -r requirements.txt`
 
 ### Download required files
-Download the dataset and store it within the project dir as `airbnb-recruiting-new-user-bookings`.
+Download the [dataset](https://www.kaggle.com/c/airbnb-recruiting-new-user-bookings/data) and store it within the project dir as `airbnb-recruiting-new-user-bookings`.
 Next create the dataseet. Here we will create our engineered features and process the dataset.
 ```bash
 cd data
